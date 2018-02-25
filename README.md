@@ -3,7 +3,7 @@ My custom components for Home Assistant
 
 ## Configuration examples
 
-### sensor/edp_redy_local
+### sensor/edp_redy_local:
 ```
 sensor:
   - platform: edp_redy_local

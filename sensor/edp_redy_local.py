@@ -80,19 +80,25 @@ def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
         """Fetch data from the redy box and update sensors."""
         host = config[CONF_HOST]
 
-        # get the data from the box
-        data_html = requests.get('http://{}:1234/api/devices'.format(host))
+        try:
+            # get the data from the box
+            data_html = requests.get('http://{}:1234/api/devices'.format(host))
 
-        html_parser = RedyHTMLParser()
-        html_parser.feed(data_html.content.decode(data_html.apparent_encoding))
-        html_parser.close()
-        html_json = html_parser.json()
-        j = json.loads(html_json)
+            html_parser = RedyHTMLParser()
+            html_parser.feed(
+                data_html.content.decode(data_html.apparent_encoding))
+            html_parser.close()
+            html_json = html_parser.json()
+            j = json.loads(html_json)
 
-        new_sensors_list.clear()
-        parse_data(j)
-        if len(new_sensors_list) > 0:
-            async_add_devices(new_sensors_list)
+            new_sensors_list.clear()
+            parse_data(j)
+            if len(new_sensors_list) > 0:
+                async_add_devices(new_sensors_list)
+
+        except (requests.exceptions.ConnectionError,
+                requests.exceptions.HTTPError) as error:
+            _LOGGER.error("Failed to get data from redy box: %s", error)
 
         # schedule next update
         async_track_point_in_time(hass, update, time + timedelta(

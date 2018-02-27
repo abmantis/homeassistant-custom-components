@@ -60,8 +60,14 @@ def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
         sensors[sensor_id] = sensor
         new_sensors_list.append(sensor)
 
-    def parse_data(json):
-        for node in json["REDYMETER"][0]["NODES"]:
+    def get_json_section(json, section_tag):
+        if section_tag in json:
+            if len(json[section_tag]) > 0:
+                return json[section_tag][0]
+        return None
+
+    def read_nodes(json_nodes):
+        for node in json_nodes:
             if "EMETER:POWER_APLUS" not in node:
                 continue
 
@@ -70,11 +76,21 @@ def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
             node_power = node["EMETER:POWER_APLUS"]
             load_sensor(node_id, node_name, node_power, None)
 
-        edpbox_json = json["EDPBOX"][0]
-        edpbox_id = edpbox_json["SMARTMETER_ID"]
-        edpbox_power = edpbox_json["EMETER:POWER_APLUS"]
-        edpbox_last_comm = edpbox_json["LAST_COMMUNICATION"]
-        load_sensor(edpbox_id, "Smart Meter", edpbox_power, edpbox_last_comm)
+    def parse_data(json):
+        redymeter_section = get_json_section(json, "REDYMETER")
+        if redymeter_section:
+            read_nodes(redymeter_section["NODES"])
+
+        zbendpoint_section = get_json_section(json, "ZBENDPOINT")
+        if zbendpoint_section:
+            read_nodes(zbendpoint_section["NODES"])
+
+        edpbox_section = get_json_section(json, "EDPBOX")
+        if edpbox_section:
+            edpbox_id = edpbox_section["SMARTMETER_ID"]
+            edpbox_power = edpbox_section["EMETER:POWER_APLUS"]
+            edpbox_last_comm = edpbox_section["LAST_COMMUNICATION"]
+            load_sensor(edpbox_id, "Smart Meter", edpbox_power, edpbox_last_comm)
 
     def update(time):
         """Fetch data from the redy box and update sensors."""

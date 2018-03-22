@@ -2,9 +2,9 @@
 # Creates sensors for EDP Re:dy power readings
 # """
 import asyncio
+import async_timeout
 import json
 import logging
-import requests
 from datetime import timedelta
 
 import voluptuous as vol
@@ -12,6 +12,7 @@ import voluptuous as vol
 from homeassistant.core import callback
 from homeassistant.const import ATTR_FRIENDLY_NAME, CONF_HOST
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import Entity, async_generate_entity_id
 from homeassistant.helpers.event import (async_track_state_change,
                                          async_track_point_in_time)
@@ -27,14 +28,16 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = 'edp_redy_local'
 ATTR_LAST_COMMUNICATION = 'last_communication'
 CONF_UPDATE_INTERVAL = 'update_interval'
+DEFAULT_TIMEOUT = 10
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_UPDATE_INTERVAL, default=30): cv.positive_int,
 })
 
+
 @asyncio.coroutine
-def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
+def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     class RedyHTMLParser(HTMLParser):
         def __init__(self):
             super().__init__()
@@ -46,6 +49,9 @@ def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
 
         def json(self):
             return self._json
+
+    host = config[CONF_HOST]
+    url = 'http://{}:1234/api/devices'.format(host)
 
     sensors = {}
     new_sensors_list = []
@@ -66,7 +72,7 @@ def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
                 return json[section_tag][0]
         return None
 
-    def read_nodes(json_nodes):
+    def parse_nodes(json_nodes):
         for node in json_nodes:
             if "EMETER:POWER_APLUS" not in node:
                 continue
@@ -76,14 +82,14 @@ def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
             node_power = node["EMETER:POWER_APLUS"]
             load_sensor(node_id, node_name, node_power, None)
 
-    def parse_data(json):
+    def parse_json(json):
         redymeter_section = get_json_section(json, "REDYMETER")
         if redymeter_section:
-            read_nodes(redymeter_section["NODES"])
+            parse_nodes(redymeter_section["NODES"])
 
         zbendpoint_section = get_json_section(json, "ZBENDPOINT")
         if zbendpoint_section:
-            read_nodes(zbendpoint_section["NODES"])
+            parse_nodes(zbendpoint_section["NODES"])
 
         edpbox_section = get_json_section(json, "EDPBOX")
         if edpbox_section:
@@ -92,35 +98,46 @@ def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
             edpbox_last_comm = edpbox_section["LAST_COMMUNICATION"]
             load_sensor(edpbox_id, "Smart Meter", edpbox_power, edpbox_last_comm)
 
-    def update(time):
+    @asyncio.coroutine
+    def async_update(time):
         """Fetch data from the redy box and update sensors."""
-        host = config[CONF_HOST]
 
         try:
-
             # get the data from the box
-            data_html = requests.get('http://{}:1234/api/devices'.format(host))
+            session = async_get_clientsession(hass)
+            with async_timeout.timeout(DEFAULT_TIMEOUT, loop=hass.loop):
+                resp = yield from session.get(url)
 
+        except (asyncio.TimeoutError, aiohttp.ClientError):
+            _LOGGER.error("Error while accessing: %s", url)
+            return
+
+        if resp.status != 200:
+            _LOGGER.error("%s not available", url)
+            return
+
+        data_html = yield from resp.text()
+
+        try:
             html_parser = RedyHTMLParser()
-            html_parser.feed(
-                data_html.content.decode(data_html.apparent_encoding))
+            html_parser.feed(data_html)
             html_parser.close()
             html_json = html_parser.json()
             j = json.loads(html_json)
 
             new_sensors_list.clear()
-            parse_data(j)
+            parse_json(j)
             if len(new_sensors_list) > 0:
-                async_add_devices(new_sensors_list)
+                async_add_entities(new_sensors_list)
 
-        except (requests.exceptions.RequestException, Exception) as error:
-            _LOGGER.error("Failed to read data from redy box: %s", error)
+        except Exception as error:
+            _LOGGER.error("Failed to load data from redy box: %s", error)
 
         # schedule next update
-        async_track_point_in_time(hass, update, time + timedelta(
+        async_track_point_in_time(hass, async_update, time + timedelta(
             seconds=config[CONF_UPDATE_INTERVAL]))
 
-    update(dt_util.utcnow())
+    yield from async_update(dt_util.utcnow())
 
 
 class EdpRedyLocalSensor(Entity):

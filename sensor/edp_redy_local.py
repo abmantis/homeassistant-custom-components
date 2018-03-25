@@ -10,7 +10,8 @@ from datetime import timedelta
 import voluptuous as vol
 
 from homeassistant.core import callback
-from homeassistant.const import ATTR_FRIENDLY_NAME, CONF_HOST
+from homeassistant.const import (ATTR_FRIENDLY_NAME, CONF_HOST,
+                                 EVENT_HOMEASSISTANT_START)
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import Entity, async_generate_entity_id
@@ -137,8 +138,12 @@ def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
         async_track_point_in_time(hass, async_update, time + timedelta(
             seconds=config[CONF_UPDATE_INTERVAL]))
 
-    yield from async_update(dt_util.utcnow())
+    @asyncio.coroutine
+    def start_component(event):
+        _LOGGER.debug("Starting updates")
+        yield from async_update(dt_util.utcnow())
 
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, start_component)
 
 class EdpRedyLocalSensor(Entity):
     """Representation of a sensor."""

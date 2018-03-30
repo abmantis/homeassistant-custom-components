@@ -69,12 +69,6 @@ def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
         sensors[sensor_id] = sensor
         new_sensors_list.append(sensor)
 
-    def get_json_section(json, section_tag):
-        if section_tag in json:
-            if len(json[section_tag]) > 0:
-                return json[section_tag][0]
-        return None
-
     def parse_nodes(json_nodes):
         for node in json_nodes:
             if "EMETER:POWER_APLUS" not in node:
@@ -85,21 +79,27 @@ def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
             node_power = node["EMETER:POWER_APLUS"]
             load_sensor(node_id, node_name, node_power, None)
 
+    def parse_type(json, type_tag):
+        if type_tag not in json:
+            return
+
+        for device in json[type_tag]:
+            if "NODES" not in device:
+                continue
+            parse_nodes(device["NODES"])
+
     def parse_json(json):
-        redymeter_section = get_json_section(json, "REDYMETER")
-        if redymeter_section:
-            parse_nodes(redymeter_section["NODES"])
+        parse_type(json, "REDYMETER")
+        parse_type(json, "ZBENDPOINT")
 
-        zbendpoint_section = get_json_section(json, "ZBENDPOINT")
-        if zbendpoint_section:
-            parse_nodes(zbendpoint_section["NODES"])
-
-        edpbox_section = get_json_section(json, "EDPBOX")
-        if edpbox_section:
-            edpbox_id = edpbox_section["SMARTMETER_ID"]
-            edpbox_power = edpbox_section["EMETER:POWER_APLUS"]
-            edpbox_last_comm = edpbox_section["LAST_COMMUNICATION"]
-            load_sensor(edpbox_id, "Smart Meter", edpbox_power, edpbox_last_comm)
+        if "EDPBOX" in json:
+            edp_box_json = json["EDPBOX"]
+            if len(edp_box_json) > 0:
+                edpbox_data = edp_box_json[0]
+                edpbox_id = edpbox_data["SMARTMETER_ID"]
+                edpbox_power = edpbox_data["EMETER:POWER_APLUS"]
+                edpbox_last_comm = edpbox_data["LAST_COMMUNICATION"]
+                load_sensor(edpbox_id, "Smart Meter", edpbox_power, edpbox_last_comm)
 
     @asyncio.coroutine
     def async_update(time):

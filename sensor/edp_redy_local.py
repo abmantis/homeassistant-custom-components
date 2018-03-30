@@ -1,6 +1,8 @@
 # """
 # Creates sensors for EDP Re:dy power readings
 # """
+
+import aiohttp
 import asyncio
 import async_timeout
 import json

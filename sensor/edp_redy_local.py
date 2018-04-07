@@ -102,7 +102,7 @@ def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
                 load_sensor(edpbox_id, "Smart Meter", edpbox_power, edpbox_last_comm)
 
     @asyncio.coroutine
-    def async_update(time):
+    def async_update():
         """Fetch data from the redy box and update sensors."""
 
         try:
@@ -136,14 +136,17 @@ def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
         except Exception as error:
             _LOGGER.error("Failed to load data from redy box: %s", error)
 
+
+    @asyncio.coroutine
+    def async_update_and_sched(time):
+        yield from async_update()
         # schedule next update
-        async_track_point_in_time(hass, async_update, time + timedelta(
-            seconds=config[CONF_UPDATE_INTERVAL]))
+        async_track_point_in_time(hass, async_update_and_sched, time + timedelta(seconds=config[CONF_UPDATE_INTERVAL]))
 
     @asyncio.coroutine
     def start_component(event):
         _LOGGER.debug("Starting updates")
-        yield from async_update(dt_util.utcnow())
+        yield from async_update_and_sched(dt_util.utcnow())
 
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, start_component)
 

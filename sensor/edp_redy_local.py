@@ -136,12 +136,13 @@ def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
         except Exception as error:
             _LOGGER.error("Failed to load data from redy box: %s", error)
 
-
     @asyncio.coroutine
     def async_update_and_sched(time):
         yield from async_update()
         # schedule next update
-        async_track_point_in_time(hass, async_update_and_sched, time + timedelta(seconds=config[CONF_UPDATE_INTERVAL]))
+        async_track_point_in_time(hass, async_update_and_sched,
+                                  time + timedelta(
+                                      seconds=config[CONF_UPDATE_INTERVAL]))
 
     @asyncio.coroutine
     def start_component(event):
@@ -149,6 +150,7 @@ def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
         yield from async_update_and_sched(dt_util.utcnow())
 
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, start_component)
+
 
 class EdpRedyLocalSensor(Entity):
     """Representation of a sensor."""
@@ -182,9 +184,9 @@ class EdpRedyLocalSensor(Entity):
         return self._id
 
     @property
-    def device_class(self):
-        """Return the class of the sensor."""
-        return "power"
+    def icon(self):
+        """Return the icon to use in the frontend."""
+        return "mdi:flash"
 
     # @property
     # def icon(self):

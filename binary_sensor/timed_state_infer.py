@@ -17,12 +17,11 @@ from homeassistant.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = 'power_state_infer'
 CONF_TIME_ON = 'seconds_on'
 CONF_TIME_OFF = 'seconds_off'
 CONF_VALUE_ON = 'value_on'
 CONF_VALUE_OFF = 'value_off'
-DEFAULT_NAME = "State Infer Binary Sensor"
+DEFAULT_NAME = "Timed State Infer Binary Sensor"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
@@ -35,15 +34,15 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 
 @asyncio.coroutine
 def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
-    async_add_devices([StateInferBinarySensor(hass, config[CONF_NAME],
-                                              config[CONF_ENTITY_ID],
-                                              config[CONF_TIME_ON],
-                                              config[CONF_TIME_OFF],
-                                              config[CONF_VALUE_ON],
-                                              config[CONF_VALUE_OFF])])
+    async_add_devices([TimedStateInferBinarySensor(hass, config[CONF_NAME],
+                                                   config[CONF_ENTITY_ID],
+                                                   config[CONF_TIME_ON],
+                                                   config[CONF_TIME_OFF],
+                                                   config[CONF_VALUE_ON],
+                                                   config[CONF_VALUE_OFF])])
 
 
-class StateInferBinarySensor(BinarySensorDevice):
+class TimedStateInferBinarySensor(BinarySensorDevice):
     """Representation of a sensor."""
 
     def __init__(self, hass, name, observed_entity_id, time_on, time_off,

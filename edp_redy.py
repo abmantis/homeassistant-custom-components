@@ -30,13 +30,15 @@ DOMAIN = 'edp_redy'
 EDP_REDY = "edp_redy"
 MODULES_UPDATE_TOPIC = '{0}_modules_update'.format(DOMAIN)
 
-UPDATE_INTERVAL = 60
 URL_BASE = "https://redy.edp.pt/EdpPortal/"
 URL_LOGIN_PAGE = URL_BASE
 URL_GET_SWITCH_MODULES = "{0}/HomeAutomation/GetSwitchModules".format(URL_BASE)
 URL_SET_STATE_VAR = "{0}/HomeAutomation/SetStateVar".format(URL_BASE)
+URL_LOGOUT = "{0}/Login/Logout".format(URL_BASE)
 
+UPDATE_INTERVAL = 60
 DEFAULT_TIMEOUT = 30
+SESSION_TIME = 50
 
 CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.Schema({
@@ -47,16 +49,19 @@ CONFIG_SCHEMA = vol.Schema({
 
 
 class EdpRedySession:
-    """ Representation of a session to the service."""
+    """ Representation of an http session to the service."""
 
     def __init__(self, hass, username, password):
         self._username = username
         self._password = password
         self._session = None
+        self._session_time = dt_util.utcnow()
         self._hass = hass
         self.modules_dict = {}
 
     async def async_init_session(self):
+        """ Creates a new http session. """
+
         payload_auth = {'username': self._username,
                         'password': self._password,
                         'screenWidth': '1920', 'screenHeight': '1080'}
@@ -91,11 +96,46 @@ class EdpRedySession:
 
         return session
 
-    async def async_fetch_data(self):
-        if self._session is None:
-            self._session = await self.async_init_session()
+    async def async_logout(self):
+        """ Logout from the current session. """
 
-        if self._session is None:
+        _LOGGER.debug("Logout")
+
+        try:
+            with async_timeout.timeout(DEFAULT_TIMEOUT, loop=self._hass.loop):
+                resp = await self._session.get(URL_LOGOUT)
+
+        except (asyncio.TimeoutError, aiohttp.ClientError):
+            _LOGGER.error("Error while doing logout")
+            return False
+
+        if resp.status != 200:
+            _LOGGER.error("Logout returned status code {0}".format(resp.status))
+            return False
+
+        return True
+
+    async def async_validate_session(self):
+        """ Checks the current session and creates a new one if needed. """
+
+        if self._session is not None:
+            session_life = dt_util.utcnow() - self._session_time
+            if session_life.total_seconds() < SESSION_TIME:
+                """ Session valid, nothing to do """
+                return True
+
+            """ Session is older than SESSION_TIME: logout """
+            await self.async_logout()
+            self._session = None
+
+        """ not valid, create new session """
+        self._session = await self.async_init_session()
+        self._session_time = dt_util.utcnow()
+        return True if self._session is not None else False
+
+    async def async_fetch_data(self):
+        """ Fetch new data from the server. """
+        if not await self.async_validate_session():
             return False
 
         try:
@@ -104,19 +144,28 @@ class EdpRedySession:
                                                 data={"filter": 1})
         except (asyncio.TimeoutError, aiohttp.ClientError):
             _LOGGER.error("Error while getting switch modules")
-            return False
+            return None
         if resp.status != 200:
             _LOGGER.error("Getting switch modules returned status code {0}"
                           .format(resp.status))
-            return False
+            return None
 
         # _LOGGER.debug("Fetched Data:\n" + r.text)
 
+        return await resp.text()
+
+    async def async_update(self):
+        """ Get data from the server and update local structures """
+
+        data_json = await self.async_fetch_data()
+        if data_json is None:
+            return False
+
         try:
-            raw_modules = json.loads(await resp.text())["Body"]["Modules"]
+            raw_modules = json.loads(data_json)["Body"]["Modules"]
         except json.decoder.JSONDecodeError:
             _LOGGER.error("Error parsing modules json. Received: \n {0}"
-                          .format(await resp.text()))
+                          .format(data_json))
             return False
 
         for module in raw_modules:
@@ -125,7 +174,9 @@ class EdpRedySession:
         return True
 
     async def async_set_state_var(self, json_payload):
-        if self._session is None:
+        """ Call SetStateVar API on the server """
+
+        if not await self.async_validate_session():
             return False
 
         try:
@@ -152,7 +203,7 @@ async def async_setup(hass, config):
 
     async def async_update_and_sched(time):
 
-        await session.async_fetch_data()
+        await session.async_update()
         dispatcher.async_dispatcher_send(hass, MODULES_UPDATE_TOPIC)
 
         # schedule next update
@@ -162,7 +213,7 @@ async def async_setup(hass, config):
     async def start_component(event):
         _LOGGER.debug("Starting updates")
 
-        await session.async_fetch_data()
+        await session.async_update()
 
         for component in ['switch']:
             await discovery.async_load_platform(hass, component, DOMAIN, {},

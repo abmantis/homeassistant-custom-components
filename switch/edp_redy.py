@@ -73,8 +73,12 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
         return await self._session.async_set_state_var(state_json)
 
     def _data_updated(self):
-        device_json = self._session.modules_dict[self._id]
-        self._parse_data(device_json)
+        if self._id in self._session.modules_dict:
+            device_json = self._session.modules_dict[self._id]
+            self._parse_data(device_json)
+        else:
+            self._is_available = False
+
         super()._data_updated()
 
     def _parse_data(self, data):
@@ -93,3 +97,5 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
             elif state_var["Name"] == "ActivePower":
                 self._active_power = state_var["Value"]
                 self._supports_power_consumption = True
+
+        self._is_available = True

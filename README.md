@@ -7,7 +7,9 @@ My custom components for Home Assistant
 Copy the following files: 
 - edp_redy.py
 - switch/edp_redy.py
+
 Add the following configuration:
+
 ```
 edp_redy:
   username: 'xxxxx'

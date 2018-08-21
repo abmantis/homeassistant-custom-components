@@ -13,7 +13,7 @@ edp_redy:
   username: 'xxxxx'
   password: 'xxxxx'
 ```
-
+---
 ### edp_redy_local:
 Copy the sensor/edp_redy_local.py and add the following configuration:
 

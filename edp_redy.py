@@ -32,11 +32,12 @@ MODULES_UPDATE_TOPIC = '{0}_modules_update'.format(DOMAIN)
 
 URL_BASE = "https://redy.edp.pt/EdpPortal/"
 URL_LOGIN_PAGE = URL_BASE
+URL_GET_ACTIVE_POWER = "{0}/Consumption/GetActivePower".format(URL_BASE)
 URL_GET_SWITCH_MODULES = "{0}/HomeAutomation/GetSwitchModules".format(URL_BASE)
 URL_SET_STATE_VAR = "{0}/HomeAutomation/SetStateVar".format(URL_BASE)
 URL_LOGOUT = "{0}/Login/Logout".format(URL_BASE)
 
-UPDATE_INTERVAL = 60
+UPDATE_INTERVAL = 30
 DEFAULT_TIMEOUT = 30
 SESSION_TIME = 50
 
@@ -58,6 +59,7 @@ class EdpRedySession:
         self._session_time = dt_util.utcnow()
         self._hass = hass
         self.modules_dict = {}
+        self.active_power = None
 
     async def async_init_session(self):
         """ Creates a new http session. """
@@ -133,7 +135,45 @@ class EdpRedySession:
         self._session_time = dt_util.utcnow()
         return True if self._session is not None else False
 
-    async def async_fetch_data(self):
+    async def async_fetch_active_power(self):
+        """ Fetch new data from the server. """
+        if not await self.async_validate_session():
+            return None
+
+        try:
+            with async_timeout.timeout(DEFAULT_TIMEOUT, loop=self._hass.loop):
+                resp = await self._session.post(URL_GET_ACTIVE_POWER)
+        except (asyncio.TimeoutError, aiohttp.ClientError):
+            _LOGGER.error("Error while getting active power")
+            return None
+        if resp.status != 200:
+            _LOGGER.error("Getting active power returned status code {0}"
+                          .format(resp.status))
+            return None
+
+        active_power_str = await resp.text()
+        _LOGGER.debug("Fetched Active Power:\n" + active_power_str)
+
+        if active_power_str is None:
+            return False
+
+        try:
+            updated_dict = json.loads(active_power_str)
+        except (json.decoder.JSONDecodeError, TypeError):
+            _LOGGER.error("Error parsing active power json. Received: \n {0}"
+                          .format(active_power_str))
+            return False
+
+        if "Body" not in updated_dict:
+            return False
+        if "ActivePower" not in updated_dict["Body"]:
+            return False
+
+        self.active_power = updated_dict["Body"]["ActivePower"]
+
+        return True
+
+    async def async_fetch_modules(self):
         """ Fetch new data from the server. """
         if not await self.async_validate_session():
             return False
@@ -144,32 +184,40 @@ class EdpRedySession:
                                                 data={"filter": 1})
         except (asyncio.TimeoutError, aiohttp.ClientError):
             _LOGGER.error("Error while getting switch modules")
-            return None
+            return False
         if resp.status != 200:
             _LOGGER.error("Getting switch modules returned status code {0}"
                           .format(resp.status))
-            return None
+            return False
 
-        # _LOGGER.debug("Fetched Data:\n" + r.text)
+        modules_str = await resp.text()
+        _LOGGER.debug("Fetched Modules:\n" + modules_str)
 
-        return await resp.text()
+        if modules_str is None:
+            return False
+
+        try:
+            updated_dict = json.loads(modules_str)
+        except (json.decoder.JSONDecodeError, TypeError):
+            _LOGGER.error("Error parsing modules json. Received: \n {0}"
+                          .format(modules_str))
+            return False
+
+        if "Body" not in updated_dict:
+            return False
+        if "Modules" not in updated_dict["Body"]:
+            return False
+
+        for module in updated_dict["Body"]["Modules"]:
+            self.modules_dict[module['PKID']] = module
+
+        return True
 
     async def async_update(self):
         """ Get data from the server and update local structures """
 
-        data_json = await self.async_fetch_data()
-        if data_json is None:
-            return False
-
-        try:
-            raw_modules = json.loads(data_json)["Body"]["Modules"]
-        except json.decoder.JSONDecodeError:
-            _LOGGER.error("Error parsing modules json. Received: \n {0}"
-                          .format(data_json))
-            return False
-
-        for module in raw_modules:
-            self.modules_dict[module['PKID']] = module
+        await self.async_fetch_modules()
+        await self.async_fetch_active_power()
 
         return True
 
@@ -215,7 +263,7 @@ async def async_setup(hass, config):
 
         await session.async_update()
 
-        for component in ['switch']:
+        for component in ['sensor', 'switch']:
             await discovery.async_load_platform(hass, component, DOMAIN, {},
                                                 config)
 
@@ -241,10 +289,9 @@ class EdpRedyDevice(Entity):
         self._device_state_attributes = {}
         self._id = device_json['PKID']
         self._unique_id = self._id
-        self._name = device_json['Name'] if len(device_json['Name']) > 0 \
+        self._base_name = device_json['Name'] if len(device_json['Name']) > 0 \
             else self._unique_id
-
-        self._parse_data(device_json)
+        self._name = self._base_name
 
     async def async_added_to_hass(self):
         dispatcher.async_dispatcher_connect(

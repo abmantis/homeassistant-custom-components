@@ -30,10 +30,12 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
 
     def __init__(self, session, device_json):
         """Initialize the switch."""
+        EdpRedyDevice.__init__(self, session, device_json)
+
         self._active_power = None
         self._supports_power_consumption = False
 
-        EdpRedyDevice.__init__(self, session, device_json)
+        self._parse_data(device_json)
 
     @property
     def icon(self):
@@ -83,8 +85,6 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
 
     def _parse_data(self, data):
         """Parse data received from the server."""
-
-        _LOGGER.debug("Switch data: " + str(data))
 
         # self._supports_power_consumption = any(
         #     key in data["Capabilities"] for key in

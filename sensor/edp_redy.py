@@ -7,7 +7,8 @@ try:
     from homeassistant.components.edp_redy import (EdpRedyDevice, EDP_REDY,
                                                    ACTIVE_POWER_ID)
 except ImportError:
-    from custom_components.edp_redy import EdpRedyDevice, EDP_REDY
+    from custom_components.edp_redy import (EdpRedyDevice, EDP_REDY,
+                                            ACTIVE_POWER_ID)
 
 _LOGGER = logging.getLogger(__name__)
 

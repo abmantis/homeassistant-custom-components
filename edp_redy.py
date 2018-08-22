@@ -28,7 +28,8 @@ _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = 'edp_redy'
 EDP_REDY = "edp_redy"
-MODULES_UPDATE_TOPIC = '{0}_modules_update'.format(DOMAIN)
+DATA_UPDATE_TOPIC = '{0}_data_update'.format(DOMAIN)
+ACTIVE_POWER_ID = "home_active_power"
 
 URL_BASE = "https://redy.edp.pt/EdpPortal/"
 URL_LOGIN_PAGE = URL_BASE
@@ -59,7 +60,7 @@ class EdpRedySession:
         self._session_time = dt_util.utcnow()
         self._hass = hass
         self.modules_dict = {}
-        self.active_power = None
+        self.values_dict = {}
 
     async def async_init_session(self):
         """ Creates a new http session. """
@@ -169,7 +170,13 @@ class EdpRedySession:
         if "ActivePower" not in updated_dict["Body"]:
             return False
 
-        self.active_power = updated_dict["Body"]["ActivePower"]
+        try:
+            self.values_dict[ACTIVE_POWER_ID] = \
+                updated_dict["Body"]["ActivePower"] * 1000
+        except ValueError:
+            _LOGGER.error(
+                "Could not parse value: ActivePower")
+            self.values_dict[ACTIVE_POWER_ID] = None
 
         return True
 
@@ -252,7 +259,7 @@ async def async_setup(hass, config):
     async def async_update_and_sched(time):
 
         await session.async_update()
-        dispatcher.async_dispatcher_send(hass, MODULES_UPDATE_TOPIC)
+        dispatcher.async_dispatcher_send(hass, DATA_UPDATE_TOPIC)
 
         # schedule next update
         async_track_point_in_time(hass, async_update_and_sched,
@@ -281,21 +288,19 @@ async def async_setup(hass, config):
 class EdpRedyDevice(Entity):
     """Representation a base re:dy device."""
 
-    def __init__(self, session, device_json):
+    def __init__(self, session, device_id, name):
         """Initialize the device."""
         self._session = session
         self._state = None
         self._is_available = True
         self._device_state_attributes = {}
-        self._id = device_json['PKID']
-        self._unique_id = self._id
-        self._base_name = device_json['Name'] if len(device_json['Name']) > 0 \
-            else self._unique_id
-        self._name = self._base_name
+        self._id = device_id
+        self._unique_id = device_id
+        self._name = name if len(name) > 0 else device_id
 
     async def async_added_to_hass(self):
         dispatcher.async_dispatcher_connect(
-            self.hass, MODULES_UPDATE_TOPIC, self._data_updated)
+            self.hass, DATA_UPDATE_TOPIC, self._data_updated)
 
     @property
     def name(self):

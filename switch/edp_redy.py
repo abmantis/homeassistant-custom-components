@@ -13,6 +13,7 @@ _LOGGER = logging.getLogger(__name__)
 # Load power in watts (W)
 ATTR_ACTIVE_POWER = 'active_power'
 
+
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Perform the setup for Xiaomi devices."""
     session = hass.data[EDP_REDY]
@@ -26,11 +27,12 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
 
 class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
-    """Representation of a Edp re:dy plug."""
+    """Representation of a Edp re:dy switch (plugs, switches, etc)."""
 
     def __init__(self, session, device_json):
         """Initialize the switch."""
-        EdpRedyDevice.__init__(self, session, device_json)
+        EdpRedyDevice.__init__(self, session, device_json['PKID'],
+                               device_json['Name'])
 
         self._active_power = None
         self._supports_power_consumption = False
@@ -104,5 +106,5 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
                     self._supports_power_consumption = False
                 else:
                     self._supports_power_consumption = True
-                
+
         self._is_available = True

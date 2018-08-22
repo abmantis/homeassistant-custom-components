@@ -95,7 +95,14 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
                 self._state = True if state_var["Value"] == "true" \
                     else False
             elif state_var["Name"] == "ActivePower":
-                self._active_power = state_var["Value"]
-                self._supports_power_consumption = True
-
+                try:
+                    self._active_power = float(state_var["Value"]) * 1000
+                except ValueError:
+                    _LOGGER.error(
+                        "Could not parse power for {0}".format(self._id))
+                    self._active_power = 0
+                    self._supports_power_consumption = False
+                else:
+                    self._supports_power_consumption = True
+                
         self._is_available = True

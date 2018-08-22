@@ -6,6 +6,7 @@ My custom components for Home Assistant
 ### edp_redy:
 Copy the following files: 
 - edp_redy.py
+- sensor/edp_redy.py
 - switch/edp_redy.py
 
 Add the following configuration:

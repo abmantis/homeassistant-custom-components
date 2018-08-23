@@ -17,7 +17,8 @@ edp_redy:
   password: 'xxxxx'
 ```
 ---
-### edp_redy_local: (prefer using the edp_redy component above, since edp_redy_local only provides sensors)
+### edp_redy_local: 
+**prefer using the edp_redy component above, since edp_redy_local only provides sensors**
 Copy the sensor/edp_redy_local.py and add the following configuration:
 
 ```

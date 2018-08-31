@@ -15,7 +15,7 @@ ATTR_ACTIVE_POWER = 'active_power'
 
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Perform the setup for Xiaomi devices."""
+    """Perform the setup for re:dy devices."""
     session = hass.data[EDP_REDY]
     devices = []
     for device_pkid, device_json in session.modules_dict.items():

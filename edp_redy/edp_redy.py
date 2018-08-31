@@ -2,7 +2,7 @@
 Support for EDP re:dy.
 
 For more details about this component, please refer to the documentation at
-https://home-assistant.io/components/.../
+https://home-assistant.io/components/edp_redy/
 """
 
 import aiohttp

@@ -17,7 +17,7 @@ ATTR_ACTIVE_POWER = 'active_power'
 
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Perform the setup for Xiaomi devices."""
+    """Perform the setup for re:dy devices."""
     session = hass.data[EDP_REDY]
     devices = []
 
@@ -26,7 +26,6 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         if "HA_POWER_METER" not in device_json["Capabilities"]:
             continue
         devices.append(EdpRedyModuleSensor(session, device_json))
-
 
     """ Create a sensor for global active power """
     devices.append(

@@ -35,7 +35,6 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
                                device_json['Name'])
 
         self._active_power = None
-        self._supports_power_consumption = False
 
         self._parse_data(device_json)
 
@@ -52,7 +51,7 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
     @property
     def device_state_attributes(self):
         """Return the state attributes."""
-        if self._supports_power_consumption:
+        if self._active_power is not None:
             attrs = {ATTR_ACTIVE_POWER: self._active_power}
         else:
             attrs = {}
@@ -89,10 +88,6 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
         """Parse data received from the server."""
         super()._parse_data(data)
 
-        # self._supports_power_consumption = any(
-        #     key in data["Capabilities"] for key in
-        #     ['HA_CONSUMPTION_METER', 'HA_ENERGY_METER', 'HA_POWER_METER'])
-
         for state_var in data["StateVars"]:
             if state_var["Name"] == "RelayState":
                 self._state = True if state_var["Value"] == "true" \
@@ -103,7 +98,4 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
                 except ValueError:
                     _LOGGER.error(
                         "Could not parse power for {0}".format(self._id))
-                    self._active_power = 0
-                    self._supports_power_consumption = False
-                else:
-                    self._supports_power_consumption = True
+                    self._active_power = None

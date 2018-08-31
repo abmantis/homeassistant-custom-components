@@ -40,7 +40,7 @@ URL_LOGOUT = "{0}/Login/Logout".format(URL_BASE)
 
 UPDATE_INTERVAL = 30
 DEFAULT_TIMEOUT = 30
-SESSION_TIME = 50
+SESSION_TIME = 59
 
 CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.Schema({
@@ -233,6 +233,9 @@ class EdpRedySession:
 
         if not await self.async_validate_session():
             return False
+
+        _LOGGER.debug("Calling {0} with:{1}".format(str(URL_SET_STATE_VAR),
+                                                    str(json_payload)))
 
         try:
             with async_timeout.timeout(DEFAULT_TIMEOUT, loop=self._hass.loop):

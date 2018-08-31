@@ -87,6 +87,7 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
 
     def _parse_data(self, data):
         """Parse data received from the server."""
+        super()._parse_data(data)
 
         # self._supports_power_consumption = any(
         #     key in data["Capabilities"] for key in
@@ -106,5 +107,3 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
                     self._supports_power_consumption = False
                 else:
                     self._supports_power_consumption = True
-
-        self._is_available = True

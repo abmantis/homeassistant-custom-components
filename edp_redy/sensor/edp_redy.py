@@ -73,6 +73,7 @@ class EdpRedySensor(EdpRedyDevice, Entity):
         else:
             self._is_available = False
 
+
 class EdpRedyModuleSensor(EdpRedyDevice, Entity):
     """Representation of a EDP re:dy module sensor."""
 
@@ -109,6 +110,7 @@ class EdpRedyModuleSensor(EdpRedyDevice, Entity):
 
     def _parse_data(self, data):
         """Parse data received from the server."""
+        super()._parse_data(data)
 
         _LOGGER.debug("Sensor data: " + str(data))
 
@@ -121,5 +123,3 @@ class EdpRedyModuleSensor(EdpRedyDevice, Entity):
                         "Could not parse power for {0}".format(self._id))
                     self._state = 0
                     self._is_available = False
-                else:
-                    self._is_available = True

@@ -334,6 +334,10 @@ class EdpRedyDevice(Entity):
 
     def _parse_data(self, data):
         """Parse data received from the server."""
-        raise NotImplementedError()
-
-
+        if "OutOfOrder" in data:
+            try:
+                self._is_available = not data["OutOfOrder"]
+            except ValueError:
+                _LOGGER.error(
+                    "Could not parse OutOfOrder for {0}".format(self._id))
+                self._is_available = False

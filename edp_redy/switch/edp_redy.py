@@ -96,6 +96,5 @@ class EdpRedySwitch(EdpRedyDevice, SwitchDevice):
                 try:
                     self._active_power = float(state_var["Value"]) * 1000
                 except ValueError:
-                    _LOGGER.error(
-                        "Could not parse power for {0}".format(self._id))
+                    _LOGGER.error("Could not parse power for %s", self._id)
                     self._active_power = None

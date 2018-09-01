@@ -28,8 +28,8 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         devices.append(EdpRedyModuleSensor(session, device_json))
 
     """ Create a sensor for global active power """
-    devices.append(
-        EdpRedySensor(session, ACTIVE_POWER_ID, "Power Home", "mdi:flash", "W"))
+    devices.append(EdpRedySensor(session, ACTIVE_POWER_ID, "Power Home",
+                                 "mdi:flash", "W"))
 
     add_devices(devices)
 
@@ -118,7 +118,6 @@ class EdpRedyModuleSensor(EdpRedyDevice, Entity):
                 try:
                     self._state = float(state_var["Value"]) * 1000
                 except ValueError:
-                    _LOGGER.error(
-                        "Could not parse power for {0}".format(self._id))
+                    _LOGGER.error("Could not parse power for %s", self._id)
                     self._state = 0
                     self._is_available = False

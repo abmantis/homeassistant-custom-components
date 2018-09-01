@@ -51,9 +51,10 @@ CONFIG_SCHEMA = vol.Schema({
 
 
 class EdpRedySession:
-    """ Representation of an http session to the service."""
+    """Representation of an http session to the service."""
 
     def __init__(self, hass, username, password):
+        """Init the session."""
         self._username = username
         self._password = password
         self._session = None
@@ -63,8 +64,7 @@ class EdpRedySession:
         self.values_dict = {}
 
     async def async_init_session(self):
-        """ Creates a new http session. """
-
+        """Create a new http session."""
         payload_auth = {'username': self._username,
                         'password': self._password,
                         'screenWidth': '1920', 'screenHeight': '1080'}
@@ -80,8 +80,7 @@ class EdpRedySession:
             return None
 
         if resp.status != 200:
-            _LOGGER.error("Login page returned status code {0}"
-                          .format(resp.status))
+            _LOGGER.error("Login page returned status code %s", resp.status)
             return None
 
         try:
@@ -93,15 +92,13 @@ class EdpRedySession:
             return None
 
         if resp.status != 200:
-            _LOGGER.error("Login post returned status code {0}"
-                          .format(resp.status))
+            _LOGGER.error("Login post returned status code %s", resp.status)
             return None
 
         return session
 
     async def async_logout(self):
-        """ Logout from the current session. """
-
+        """Logout from the current session."""
         _LOGGER.debug("Logout")
 
         try:
@@ -113,14 +110,13 @@ class EdpRedySession:
             return False
 
         if resp.status != 200:
-            _LOGGER.error("Logout returned status code {0}".format(resp.status))
+            _LOGGER.error("Logout returned status code %s", resp.status)
             return False
 
         return True
 
     async def async_validate_session(self):
-        """ Checks the current session and creates a new one if needed. """
-
+        """Check the current session and create a new one if needed."""
         if self._session is not None:
             session_life = dt_util.utcnow() - self._session_time
             if session_life.total_seconds() < SESSION_TIME:
@@ -137,7 +133,7 @@ class EdpRedySession:
         return True if self._session is not None else False
 
     async def async_fetch_active_power(self):
-        """ Fetch new data from the server. """
+        """Fetch new data from the server."""
         if not await self.async_validate_session():
             return None
 
@@ -148,8 +144,8 @@ class EdpRedySession:
             _LOGGER.error("Error while getting active power")
             return None
         if resp.status != 200:
-            _LOGGER.error("Getting active power returned status code {0}"
-                          .format(resp.status))
+            _LOGGER.error("Getting active power returned status code %s",
+                          resp.status)
             return None
 
         active_power_str = await resp.text()
@@ -161,8 +157,8 @@ class EdpRedySession:
         try:
             updated_dict = json.loads(active_power_str)
         except (json.decoder.JSONDecodeError, TypeError):
-            _LOGGER.error("Error parsing active power json. Received: \n {0}"
-                          .format(active_power_str))
+            _LOGGER.error("Error parsing active power json. Received: \n %s",
+                          active_power_str)
             return False
 
         if "Body" not in updated_dict:
@@ -181,7 +177,7 @@ class EdpRedySession:
         return True
 
     async def async_fetch_modules(self):
-        """ Fetch new data from the server. """
+        """Fetch new data from the server."""
         if not await self.async_validate_session():
             return False
 
@@ -193,8 +189,8 @@ class EdpRedySession:
             _LOGGER.error("Error while getting switch modules")
             return False
         if resp.status != 200:
-            _LOGGER.error("Getting switch modules returned status code {0}"
-                          .format(resp.status))
+            _LOGGER.error("Getting switch modules returned status code %s",
+                          resp.status)
             return False
 
         modules_str = await resp.text()
@@ -206,8 +202,8 @@ class EdpRedySession:
         try:
             updated_dict = json.loads(modules_str)
         except (json.decoder.JSONDecodeError, TypeError):
-            _LOGGER.error("Error parsing modules json. Received: \n {0}"
-                          .format(modules_str))
+            _LOGGER.error("Error parsing modules json. Received: \n %s",
+                          modules_str)
             return False
 
         if "Body" not in updated_dict:
@@ -221,21 +217,19 @@ class EdpRedySession:
         return True
 
     async def async_update(self):
-        """ Get data from the server and update local structures """
-
+        """Get data from the server and update local structures."""
         await self.async_fetch_modules()
         await self.async_fetch_active_power()
 
         return True
 
     async def async_set_state_var(self, json_payload):
-        """ Call SetStateVar API on the server """
-
+        """Call SetStateVar API on the server."""
         if not await self.async_validate_session():
             return False
 
-        _LOGGER.debug("Calling {0} with:{1}".format(str(URL_SET_STATE_VAR),
-                                                    str(json_payload)))
+        _LOGGER.debug("Calling %s with: %s", URL_SET_STATE_VAR,
+                      str(json_payload))
 
         try:
             with async_timeout.timeout(DEFAULT_TIMEOUT, loop=self._hass.loop):
@@ -245,8 +239,8 @@ class EdpRedySession:
             _LOGGER.error("Error while setting state var")
             return False
         if resp.status != 200:
-            _LOGGER.error("Setting state var returned status code {0}"
-                          .format(resp.status))
+            _LOGGER.error("Setting state var returned status code %s",
+                          resp.status)
             return False
 
         return True
@@ -254,7 +248,6 @@ class EdpRedySession:
 
 async def async_setup(hass, config):
     """Set up the EDP re:dy component."""
-
     session = EdpRedySession(hass, config[DOMAIN][CONF_USERNAME],
                              config[DOMAIN][CONF_PASSWORD])
     hass.data[EDP_REDY] = session
@@ -302,6 +295,7 @@ class EdpRedyDevice(Entity):
         self._name = name if len(name) > 0 else device_id
 
     async def async_added_to_hass(self):
+        """Subscribe to the data updates topic."""
         dispatcher.async_dispatcher_connect(
             self.hass, DATA_UPDATE_TOPIC, self._data_updated)
 
@@ -342,5 +336,5 @@ class EdpRedyDevice(Entity):
                 self._is_available = not data["OutOfOrder"]
             except ValueError:
                 _LOGGER.error(
-                    "Could not parse OutOfOrder for {0}".format(self._id))
+                    "Could not parse OutOfOrder for %s", self._id)
                 self._is_available = False

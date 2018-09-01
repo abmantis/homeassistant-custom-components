@@ -135,18 +135,18 @@ class EdpRedySession:
     async def async_fetch_active_power(self):
         """Fetch new data from the server."""
         if not await self.async_validate_session():
-            return None
+            return False
 
         try:
             with async_timeout.timeout(DEFAULT_TIMEOUT, loop=self._hass.loop):
                 resp = await self._session.post(URL_GET_ACTIVE_POWER)
         except (asyncio.TimeoutError, aiohttp.ClientError):
             _LOGGER.error("Error while getting active power")
-            return None
+            return False
         if resp.status != 200:
             _LOGGER.error("Getting active power returned status code %s",
                           resp.status)
-            return None
+            return False
 
         active_power_str = await resp.text()
         _LOGGER.debug("Fetched Active Power:\n" + active_power_str)

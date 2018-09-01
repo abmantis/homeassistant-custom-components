@@ -218,10 +218,10 @@ class EdpRedySession:
 
     async def async_update(self):
         """Get data from the server and update local structures."""
-        await self.async_fetch_modules()
-        await self.async_fetch_active_power()
+        modules_success = await self.async_fetch_modules()
+        active_power_success = await self.async_fetch_active_power()
 
-        return True
+        return modules_success and active_power_success
 
     async def async_set_state_var(self, json_payload):
         """Call SetStateVar API on the server."""
@@ -251,11 +251,20 @@ async def async_setup(hass, config):
     session = EdpRedySession(hass, config[DOMAIN][CONF_USERNAME],
                              config[DOMAIN][CONF_PASSWORD])
     hass.data[EDP_REDY] = session
+    platform_loaded = False
 
     async def async_update_and_sched(time):
+        update_success = await session.async_update()
 
-        await session.async_update()
-        dispatcher.async_dispatcher_send(hass, DATA_UPDATE_TOPIC)
+        if update_success:
+            dispatcher.async_dispatcher_send(hass, DATA_UPDATE_TOPIC)
+
+            nonlocal platform_loaded
+            if not platform_loaded:
+                for component in ['sensor', 'switch']:
+                    await discovery.async_load_platform(hass, component,
+                                                        DOMAIN, {}, config)
+                platform_loaded = True
 
         # schedule next update
         async_track_point_in_time(hass, async_update_and_sched,
@@ -263,16 +272,7 @@ async def async_setup(hass, config):
 
     async def start_component(event):
         _LOGGER.debug("Starting updates")
-
-        await session.async_update()
-
-        for component in ['sensor', 'switch']:
-            await discovery.async_load_platform(hass, component, DOMAIN, {},
-                                                config)
-
-        async_track_point_in_time(hass, async_update_and_sched,
-                                  dt_util.utcnow() + timedelta(
-                                      seconds=UPDATE_INTERVAL))
+        await async_update_and_sched(dt_util.utcnow())
 
     # only start fetching data after HA boots to prevent delaying the boot
     # process

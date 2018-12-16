@@ -19,7 +19,6 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import Entity, async_generate_entity_id
 from homeassistant.helpers.event import (async_track_state_change,
                                          async_track_point_in_time)
-from homeassistant.helpers.restore_state import async_get_last_state
 from homeassistant.helpers.config_validation import PLATFORM_SCHEMA
 from homeassistant.helpers import template as template_helper
 from homeassistant.util import dt as dt_util

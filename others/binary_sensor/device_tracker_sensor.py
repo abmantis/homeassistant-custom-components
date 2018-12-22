@@ -17,7 +17,6 @@ from homeassistant.exceptions import TemplateError
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity, async_generate_entity_id
 from homeassistant.helpers.event import async_track_state_change
-from homeassistant.helpers.restore_state import async_get_last_state
 from homeassistant.helpers import template as template_helper
 
 _LOGGER = logging.getLogger(__name__)
@@ -86,9 +85,6 @@ class DeviceTrackerSensor(BinarySensorDevice):
     @asyncio.coroutine
     def async_added_to_hass(self):
         """Register callbacks."""
-        #state = yield from async_get_last_state(self.hass, self.entity_id)
-        #if state:
-        #    self._state = state.state
 
         @callback
         def template_sensor_state_listener(entity, old_state, new_state):

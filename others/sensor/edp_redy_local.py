@@ -13,7 +13,7 @@ import voluptuous as vol
 
 from homeassistant.core import callback
 from homeassistant.const import (ATTR_FRIENDLY_NAME, CONF_HOST,
-                                 EVENT_HOMEASSISTANT_START)
+                                 EVENT_HOMEASSISTANT_START, STATE_UNKNOWN)
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import Entity, async_generate_entity_id
@@ -158,12 +158,12 @@ class EdpRedyLocalSensor(Entity):
         """Set up sensor and add update callback to get data from websocket."""
         self._id = node_id
         self._name = 'Power {0}'.format(name)
-        self._power = float(power)*1000
+        self._power = float(power)*1000 if power else STATE_UNKNOWN
         self._last_comm = last_communication
 
     def update_data(self, power, last_communication):
         """Update the sensor's state."""
-        self._power = float(power)*1000
+        self._power = float(power)*1000 if power else STATE_UNKNOWN
         self._last_comm = last_communication
         self.async_schedule_update_ha_state()
 

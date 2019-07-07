@@ -70,6 +70,10 @@ def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
 
     def parse_nodes(json_nodes):
         for node in json_nodes:
+            if "ID" not in node:
+                continue
+            if "NAME" not in node:
+                continue
             if "EMETER:POWER_APLUS" not in node:
                 continue
 

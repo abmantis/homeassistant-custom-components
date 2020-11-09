@@ -1,0 +1,12 @@
+{
+  "domain": "whirlpool",
+  "name": "Whirlpool Sixth Sense",
+  "config_flow": true,
+  "documentation": "",
+  "requirements": [
+    "whirlpool-sixth-sense"
+  ],
+  "codeowners": [
+    "@abmantis"
+  ]
+}

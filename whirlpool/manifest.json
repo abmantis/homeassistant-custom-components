@@ -4,7 +4,7 @@
   "config_flow": true,
   "documentation": "",
   "requirements": [
-    "whirlpool-sixth-sense"
+    "whirlpool-sixth-sense==0.1"
   ],
   "codeowners": [
     "@abmantis"

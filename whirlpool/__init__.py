@@ -28,6 +28,7 @@ async def async_setup(hass, config):
     username = config[DOMAIN][CONF_USERNAME]
     password = config[DOMAIN][CONF_PASSWORD]
     auth = Auth(username, password)
+    await auth.load_auth_file()
 
     hass.data[DOMAIN] = {"auth": auth}
 

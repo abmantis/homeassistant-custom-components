@@ -60,8 +60,17 @@ class AirConEntity(ClimateEntity):
 
     async def _async_connect(self):
         """Connect aircon to the cloud."""
-        _LOGGER.debug("Connecting")
         await self._aircon.connect()
+
+    @property
+    def min_temp(self) -> float:
+        """Return the minimum temperature."""
+        return 16
+
+    @property
+    def max_temp(self) -> float:
+        """Return the maximum temperature."""
+        return 30
 
     @property
     def supported_features(self):

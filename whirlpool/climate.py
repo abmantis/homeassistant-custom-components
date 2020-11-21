@@ -42,9 +42,13 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     said_list = auth.get_said_list()
     if not said_list:
         return
-    aircon = AirConEntity(said_list[0], auth)
-    await aircon._async_connect()
-    async_add_entities([aircon], True)
+    devices = []
+    for key in range(len(said_list)):
+        aircon = AirConEntity(said_list[key], auth)
+        await aircon._async_connect()
+        devices.append(aircon)
+        
+    async_add_entities(devices, True)
 
 
 class AirConEntity(ClimateEntity):

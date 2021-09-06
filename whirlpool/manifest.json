@@ -2,6 +2,7 @@
   "domain": "whirlpool",
   "name": "Whirlpool Sixth Sense",
   "config_flow": true,
+  "version": "1.0.0",
   "documentation": "",
   "requirements": [
     "whirlpool-sixth-sense==0.14.2"
